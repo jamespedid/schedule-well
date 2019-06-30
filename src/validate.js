@@ -142,7 +142,7 @@ class SchedulingInputValidator {
         for (let i = 0; i < weeklyPreferences.length - 1; i += 1) {
             const wp1 = weeklyPreferences[i];
             const wp2 = weeklyPreferences[i + 1];
-            if (wp1.overlaps(wp2)) {
+            if (wp1.interval.overlaps(wp2.interval)) {
                 this.errors.push('invalid weeklyPreferences - overlap not allowed');
             }
         }

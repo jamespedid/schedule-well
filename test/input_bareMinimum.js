@@ -1,7 +1,7 @@
 module.exports = {
     resolution: { minutes: 30 },
     schedulingParameters: {
-        schedulingPeriod: { start: "2019-07-01T00:00:00Z", end: "2019-07-01T23:59:59Z" },
+        schedulingPeriod: { start: "2019-07-01T00:00:00Z", end: "2019-07-02T00:00:00Z" },
         numberOfEvents: 5,
         lengthOfEvents: { hours: 1, minutes: 15 },
     },

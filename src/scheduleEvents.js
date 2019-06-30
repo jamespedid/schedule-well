@@ -141,6 +141,9 @@ function findBestEventInterval(event, weightedIntervalSet, alreadyUsedIndexes) {
         if (sliceA.effectiveWeight === 0 && sliceB.effectiveWeight > 0) {
             return 1;
         }
+        if (sliceA.effectiveWeight > 0 && sliceB.effectiveWeight > 0) {
+            return sliceB.effectiveWeight - sliceA.effectiveWeight;
+        }
         return sliceB.weight - sliceA.weight;
     });
     for (let i = 0; i < weightedIntervalSet.length - event.numberOfSubintervals; i += 1) {

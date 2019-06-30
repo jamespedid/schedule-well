@@ -90,6 +90,14 @@ import { DateTime, Interval, Duration, Zone } from 'luxon';
  */
 
 /**
+ * @typedef {Object} EventToScheduleProcessing
+ * @property {Array<string>} participantIds
+ * @property {Duration} eventDuration
+ * @property {number} numberOfSubintervals
+ */
+
+
+/**
  * @typedef {Object} SchedulingParameters
  * @property {Interval} schedulingPeriod - period for which events are to be scheduled over
  * @property {Array<EventToSchedule>} eventsToSchedule - list of events to schedule. If not provided, then events will

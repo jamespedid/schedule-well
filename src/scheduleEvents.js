@@ -87,17 +87,21 @@ function createEventsToScheduleHeap(state) {
 function doScheduling(state) {
     let nextEventToSchedule = state.eventsToScheduleHeap.pop();
     state.scheduledEvents = [];
+    const alreadyUsedIndexes = new Set();
     while (nextEventToSchedule) {
-        scheduleEvent(state, nextEventToSchedule);
+        scheduleEvent(state, nextEventToSchedule, alreadyUsedIndexes);
         nextEventToSchedule = state.eventsToScheduleHeap.pop();
     }
 }
 
-function scheduleEvent(state, event) {
+function scheduleEvent(state, event, alreadyUsedIndexes) {
     const weightedIntervalSet = copyWeightedIntervalSet(state.schedulingInterval);
     const combinedIntervalSet = combineParticipantIntervalSets(weightedIntervalSet, event.participants);
-    const eventIntervals = findBestEventInterval(event, combinedIntervalSet);
+    const eventIntervals = findBestEventInterval(event, combinedIntervalSet, alreadyUsedIndexes);
     const startingEventTime = eventIntervals[0].interval.start;
+    for (const interval of eventIntervals) {
+        alreadyUsedIndexes.add(interval.index);
+    }
     event.eventInterval = Interval.after(startingEventTime, event.eventDuration);
     for (const participant of event.participants) {
         for (let i = 0; i < eventIntervals.length; i += 1) {
@@ -107,7 +111,7 @@ function scheduleEvent(state, event) {
     state.scheduledEvents.push(event.eventInterval);
 }
 
-function combineParticipantIntervalSets(destinationIntervalSet, participants, weightMultiplier = 1) {
+function combineParticipantIntervalSets(destinationIntervalSet, participants) {
     for (let i = 0; i < destinationIntervalSet.length; i += 1) {
         const destinationInterval = destinationIntervalSet[i];
         for (const participant of participants) {
@@ -120,61 +124,52 @@ function combineParticipantIntervalSets(destinationIntervalSet, participants, we
 }
 
 /**
- * Returns the end of the largest contiguous space that the event falls in to,
- * first by considering effective weights, and then considering weights if effective
- * weights were not found.
+ * Returns the contiguous block with the highest weight that the event can be placed
+ * into. If there is a tie, then the latest block is chosen.
  *
- * TODO: make sure that events found in the second manner do not overlap
  * events produced by the algorithm.
- * @param event
- * @param weightedIntervalSet
+ * @param {EventToScheduleProcessing} event
+ * @param {WeightedIntervalSet} weightedIntervalSet
+ * @param {Set<number>} alreadyUsedIndexes
  * @returns {*}
  */
-function findBestEventInterval(event, weightedIntervalSet) {
-    let largestSubintervalStartingIndex = -1;
-    let largestConsecutiveNonzeroIntervals = 0;
-    let startingIndex = -1;
-    let consecutiveNonzeroIntervals = 0;
-    // equality on index to perform the consecutive processing logic after the last check
-    for (let i = 0; i <= weightedIntervalSet.length; i += 1) {
-        if (i !== weightedIntervalSet.length && weightedIntervalSet[i].effectiveWeight > 0) {
-            consecutiveNonzeroIntervals += 1;
-            if (startingIndex === -1) {
-                startingIndex = i;
-            }
-        } else {
-            if (consecutiveNonzeroIntervals >= event.numberOfSubintervals) {
-                if (consecutiveNonzeroIntervals > largestConsecutiveNonzeroIntervals) {
-                    largestSubintervalStartingIndex = startingIndex;
-                    largestConsecutiveNonzeroIntervals = consecutiveNonzeroIntervals;
-                }
-                startingIndex = -1;
-            }
-            consecutiveNonzeroIntervals = 0;
+function findBestEventInterval(event, weightedIntervalSet, alreadyUsedIndexes) {
+    const sliceHeap = new Heap((sliceA, sliceB) => {
+        if (sliceA.effectiveWeight > 0 && sliceB.effectiveWeight === 0) {
+            return -1;
         }
+        if (sliceA.effectiveWeight === 0 && sliceB.effectiveWeight > 0) {
+            return 1;
+        }
+        return sliceB.weight - sliceA.weight;
+    });
+    for (let i = 0; i < weightedIntervalSet.length - event.numberOfSubintervals; i += 1) {
+        const slice = {
+            effectiveWeight: 0,
+            weight: 0,
+            index: i,
+        };
+        const upperBoundOfSlice = i + event.numberOfSubintervals;
+        for (let j = i; j < upperBoundOfSlice; j += 1) {
+            slice.effectiveWeight += weightedIntervalSet[j].effectiveWeight;
+            slice.weight += weightedIntervalSet[j].weight;
+        }
+        sliceHeap.push(slice);
     }
-    if (largestSubintervalStartingIndex === -1) {
-        // find one based on weights instead of effective weights.
-        for (let i = 0; i <= weightedIntervalSet.length; i += 1) {
-            if (i !== weightedIntervalSet.length && weightedIntervalSet[i].weight > 0) {
-                consecutiveNonzeroIntervals += 1;
-                if (startingIndex === -1) {
-                    startingIndex = i;
-                }
-            } else {
-                if (consecutiveNonzeroIntervals >= event.numberOfSubintervals) {
-                    if (consecutiveNonzeroIntervals > largestConsecutiveNonzeroIntervals) {
-                        largestSubintervalStartingIndex = startingIndex;
-                        largestConsecutiveNonzeroIntervals = consecutiveNonzeroIntervals;
-                    }
-                    startingIndex = -1;
-                }
-                consecutiveNonzeroIntervals = 0;
+    function sliceHasUsedIndex(slice) {
+        const upperBound = slice.index + event.numberOfSubintervals;
+        for (let i = slice.index; i < upperBound; i += 1) {
+            if (alreadyUsedIndexes.has(i)) {
+                return true;
             }
         }
+        return false;
     }
-    const end = largestSubintervalStartingIndex + largestConsecutiveNonzeroIntervals;
-    return weightedIntervalSet.slice(end - event.numberOfSubintervals, end);
+    let largestSlice = sliceHeap.pop();
+    while (!sliceHeap.empty() && sliceHasUsedIndex(largestSlice)) {
+        largestSlice = sliceHeap.pop();
+    }
+    return weightedIntervalSet.slice(largestSlice.index, largestSlice.index + event.numberOfSubintervals);
 }
 
 /**

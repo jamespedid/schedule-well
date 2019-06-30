@@ -1,0 +1,22 @@
+{
+  "name": "schedule-well",
+  "version": "1.0.0",
+  "dependencies": {
+    "heap": "^0.2.6",
+    "lodash": "^4.17.11",
+    "luxon": "^1.15.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/node": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
+    "@babel/register": "^7.4.4",
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4"
+  },
+  "scripts": {
+    "build": "babel ./src -d ./lib",
+    "test": "mocha"
+  }
+}

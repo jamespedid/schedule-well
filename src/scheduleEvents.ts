@@ -5,20 +5,24 @@ import { validateSchedulingInput } from './validate';
 import { DateTime, Duration, Interval } from 'luxon';
 import {
     AlreadyUsedIndexesMapSet,
-    EventToScheduleProcessed, EventToScheduleProcessing, ParticipantData, ParticipantId,
-    ScheduledEvent,
+    EventToScheduleProcessed,
+    EventToScheduleProcessing,
+    ParticipantData,
+    ParticipantId,
     ScheduledEvents,
     SchedulingEventsInputLike,
     SchedulingEventsState,
-    SchedulingEventsStateComputedSchedulingInterval, SchedulingEventsStateEventsToSchedule,
-    SchedulingEventsStateFinal, SchedulingEventsStateParticipants,
-    SchedulingEventsStateStart, WeeklyPreference, WeightedInterval, WeightedIntervalSet, WeightedIntervalSlice,
+    SchedulingEventsStateComputedSchedulingInterval,
+    SchedulingEventsStateEventsToSchedule,
+    SchedulingEventsStateFinal,
+    SchedulingEventsStateParticipants,
+    SchedulingEventsStateStart,
+    WeeklyPreference,
+    WeightedInterval,
+    WeightedIntervalSet,
+    WeightedIntervalSlice,
 } from '../types';
 
-/**
- *  @param {ScheduleEventsInputLike} schedulingInputLike - scheduling input
- *  @returns {ScheduleEventsOutput}
- */
 export function scheduleEvents(schedulingInputLike: SchedulingEventsInputLike): ScheduledEvents {
     /*
         At this point: the input entered can be in various forms.
@@ -93,10 +97,6 @@ export function scheduleEvents(schedulingInputLike: SchedulingEventsInputLike): 
     return formatOutput((state as SchedulingEventsStateFinal).scheduledEvents);
 }
 
-/**
- * @param {EventToScheduleProcessed[]} scheduledEvents
- * @returns {ScheduledEvent[]}
- */
 function formatOutput(scheduledEvents: EventToScheduleProcessed[]): ScheduledEvents {
     return scheduledEvents.map(scheduledEvent => {
         const participantIds = scheduledEvent.participants.map(p => p.id);
@@ -105,8 +105,8 @@ function formatOutput(scheduledEvents: EventToScheduleProcessed[]): ScheduledEve
             eventInterval: {
                 start: scheduledEvent.eventInterval.start.toISO(),
                 end: scheduledEvent.eventInterval.end.toISO(),
-            }
-        }
+            },
+        };
     });
 }
 
@@ -220,9 +220,6 @@ function scheduleEvent(state: SchedulingEventsStateFinal, event: EventToSchedule
 
 /**
  * Combines the interval sets of multiple participants
- * @param destinationIntervalSet
- * @param participants
- * @returns {*}
  */
 function combineParticipantIntervalSets(destinationIntervalSet: WeightedIntervalSet, participants: ParticipantData[]) {
     for (let i = 0; i < destinationIntervalSet.length; i += 1) {
@@ -241,10 +238,6 @@ function combineParticipantIntervalSets(destinationIntervalSet: WeightedInterval
  * into. If there is a tie, then the block with the highest weight is chosen.
  * events produced by the algorithm. If there is still a tie, it is left to the implementation
  * detail of the heap. (The implementation detail here seems to choose the earliest event first.)
- * @param {EventToScheduleProcessing} event
- * @param {WeightedIntervalSet} weightedIntervalSet
- * @param {Set<number>} alreadyUsedIndexes
- * @returns {*}
  */
 function findBestEventInterval(event: EventToScheduleProcessing, weightedIntervalSet: WeightedIntervalSet, alreadyUsedIndexes: AlreadyUsedIndexesMapSet): WeightedInterval[] {
     function sliceHasUsedIndex(index: number) {
@@ -297,9 +290,6 @@ function findBestEventInterval(event: EventToScheduleProcessing, weightedInterva
 /**
  * Note: the intervals created here are contiguous and in order. This is important
  * for the process to work.
- * @param {Interval} interval
- * @param {Duration} resolution
- * @returns {WeightedIntervalSet}
  */
 function createWeightedIntervalSet(interval: Interval, resolution: Duration) {
     const splitByResolution = interval.splitBy(resolution);
@@ -313,10 +303,6 @@ function createWeightedIntervalSet(interval: Interval, resolution: Duration) {
     });
 }
 
-/**
- * @param {WeightedIntervalSet} weightedInterval
- * @returns {WeightedIntervalSet}
- */
 function copyWeightedIntervalSet(weightedInterval: WeightedIntervalSet) {
     return cloneDeep(weightedInterval);
 }
@@ -325,10 +311,6 @@ function copyWeightedIntervalSet(weightedInterval: WeightedIntervalSet) {
  * Creates a weighted interval set from a reference weighted interval set that
  * has the participant preferences set based on the weekly preferences and the events
  * of that user.
- * @param {WeightedIntervalSet} weightedIntervalSet
- * @param {WeeklyPreference[]} weeklyPreferences
- * @param {Interval[]} events
- * @returns {Array<{effectiveWeight: number, interval: Interval, weight: number}>}
  */
 function createParticipantWeightedInterval(weightedIntervalSet: WeightedIntervalSet, weeklyPreferences: WeeklyPreference[], events: Interval[]): WeightedIntervalSet {
     const weeklyPreferenceIntervalSet = copyWeightedIntervalSet(weightedIntervalSet);
@@ -356,11 +338,6 @@ function getOverlappingIntervals(weightedIntervalSet: WeightedIntervalSet, inter
     return weightedIntervalSet.slice(startingIntervalIndex, endingIntervalIndex);
 }
 
-/**
- * Returns weight interval set index that contains the target date time.
- * @param {WeightedIntervalSet} weightedIntervalSet
- * @param {DateTime} targetDateTime
- */
 function binarySearchWeightedInterval(weightedIntervalSet: WeightedIntervalSet, targetDateTime: DateTime) {
     let leftPivot = 0;
     let rightPivot = weightedIntervalSet.length - 1;
@@ -383,10 +360,6 @@ function binarySearchWeightedInterval(weightedIntervalSet: WeightedIntervalSet, 
     return -1;
 }
 
-/**
- * @param {Interval} weeklyPreferenceInterval
- * @param {Interval} subinterval
- */
 function isWeeklyOverlap(weeklyPreferenceInterval: Interval, subinterval: Interval) {
     const startOfWeeklyPreferenceWeek = weeklyPreferenceInterval.start.startOf('week');
     const startingOffset1 = (weeklyPreferenceInterval.start as any) - (startOfWeeklyPreferenceWeek as any);

@@ -16,11 +16,6 @@ import {
     WeeklyPreference,
 } from '../types';
 
-/**
- * The schedulingInput is assumed to be well-formed.
- * Validations here only will consider if the input data is consistent.
- * @param {ScheduleEventsInput} schedulingInput
- */
 export function validateSchedulingInput(schedulingInput: SchedulingEventsInput) {
     const validator = new SchedulingInputValidator(schedulingInput);
     validator.assertAllValidations();
@@ -197,11 +192,11 @@ class SchedulingInputValidator {
         }
     }
 
-    get participantIds() {
+    get participantIds(): ParticipantId[] {
         return map(this.participants, participant => participant.id);
     }
 
-    areParticipantIdsCovered(participantIds?: ParticipantId[]) {
+    areParticipantIdsCovered(participantIds?: ParticipantId[]): boolean {
         return isEmpty(difference(participantIds, this.participantIds));
     }
 

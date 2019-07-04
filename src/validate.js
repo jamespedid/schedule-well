@@ -7,6 +7,7 @@ import {
     isArray,
 } from './_lodashImports';
 import { MultiError } from './multiError';
+import { DateTime, Interval } from 'luxon';
 
 /**
  * The schedulingInput is assumed to be well-formed.
@@ -135,10 +136,29 @@ class SchedulingInputValidator {
     }
 
     validateWeeklyPreferences(weeklyPreferences) {
+        if (weeklyPreferences.length === 0) {
+            return;
+        }
         weeklyPreferences.sort((wp1, wp2) => {
             return wp1.interval.start.valueOf() - wp2.interval.start.valueOf();
         });
-        forEach(weeklyPreferences, weeklyPreference => this.validateWeeklyPreference(weeklyPreference));
+        let minStartingWeeklyPreferenceTime = Infinity;
+        let maxEndingWeeklyPreferenceTime = -Infinity;
+        forEach(weeklyPreferences, weeklyPreference => {
+            this.validateWeeklyPreference(weeklyPreference);
+            if (weeklyPreference.interval.isValid) {
+                minStartingWeeklyPreferenceTime = Math.min(weeklyPreference.interval.valueOf(), minStartingWeeklyPreferenceTime);
+                maxEndingWeeklyPreferenceTime = Math.max(weeklyPreference.interval.valueOf(), maxEndingWeeklyPreferenceTime);
+            }
+        });
+        const entireWeeklyInterval = Interval.fromDateTimes(
+            DateTime.fromMillis(minStartingWeeklyPreferenceTime),
+            DateTime.fromMillis(maxEndingWeeklyPreferenceTime),
+        );
+        if (entireWeeklyInterval.length('week') > 1) {
+            this.errors.push('weeklyPreferences must not extend to be beyond single week');
+        }
+
         for (let i = 0; i < weeklyPreferences.length - 1; i += 1) {
             const wp1 = weeklyPreferences[i];
             const wp2 = weeklyPreferences[i + 1];

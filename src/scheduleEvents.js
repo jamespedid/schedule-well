@@ -6,15 +6,79 @@ import { Interval } from 'luxon';
 
 /**
  *  @param {ScheduleEventsInputLike} schedulingInputLike - scheduling input
+ *  @returns {Array<EventToScheduleProcessed>}
  */
 export function scheduleEvents(schedulingInputLike) {
+    /*
+        At this point: the input entered can be in various forms.
+     */
     const schedulingInput = interpretInput(schedulingInputLike);
+    /*
+        At this point: the input is standardized into objects that the rest of the function can rely on.
+     */
     validateSchedulingInput(schedulingInput);
+    /*
+        At this point: the standardized input is valid. If it was not, the validate function would have thrown an error.
+        Key takeaways:
+            scheduledInput.resolution is a valid duration object.
+            scheduledInput.schedulingParameters.schedulingPeriod is a valid interval object.
+            scheduledInput.schedulingParameters.eventsToSchedule is an array. (It may be empty.)
+                If an eventToSchedule has participantIds, then the ids are guaranteed to be covered
+                by the participants array ids.
+            scheduledInput.schedulingParameters.numberOfEvents is an integer. If eventsToSchedule is non-zero,
+                then the length of eventsToSchedule equals this number.
+            scheduledInput.schedulingParameters.lengthOfEvents is a duration or an array of durations.
+                If it is an array of durations, then the length of the durations matches the number of events.
+            scheduledInput.participants is an array of zero or more participants.
+                If a participant has weekly preferences, then these preferences have no overlap,
+                and no weekly preference is longer than one week.
+                It is a requirement that the entire set of weekly preferences exists in a single calendar week,
+                and this is enforced, even though the actual week itself doesn't matter, just the times relative
+                to the week.
+                If a participant has scheduled events, then the events will be valid luxon intervals.
+                If a participant did not have a weight assigned, then the weight of the participant is 1.
+                Weights are nonnegative.
+     */
     const state = { schedulingInput };
     computeSchedulingInterval(state);
+    /*
+        At this point, state = {
+            schedulingInput: SchedulingInput,
+            schedulingInterval: WeightedIntervalSet.
+        }
+     */
     gatherParticipantData(state);
+    /*
+        At this point, state = {
+            schedulingInput: SchedulingInput,
+            schedulingInterval: WeightedIntervalSet,
+            participantsById: Array<string>,
+            participants: Array<ParticipantData>
+        }
+     */
     createEventsToScheduleHeap(state);
+    /*
+        At this point, state = {
+            schedulingInput: SchedulingInput,
+            schedulingInterval: WeightedIntervalSet,
+            participantsById: Array<string>,
+            participants: Array<ParticipantData>,
+            eventsToScheduleHeap: Heap<EventToScheduleProcessing>
+        }
+        The heap here is a maximum value heap, and will arrange the events according to the the number of subintervals
+        of size schedulingInput.resolution. Larger events will be scheduled first.
+     */
     doScheduling(state);
+    /*
+        At this point, state = {
+            schedulingInput: SchedulingInput,
+            schedulingInterval: WeightedIntervalSet,
+            participantsById: Array<string>,
+            participants: Array<ParticipantData>,
+            eventsToScheduleHeap: Heap<EventToScheduleProcessing> (empty),
+            scheduledEvents: Array<EventToScheduleProcessed>
+        }
+     */
     return state.scheduledEvents;
 }
 
@@ -87,10 +151,21 @@ function createEventsToScheduleHeap(state) {
 function doScheduling(state) {
     let nextEventToSchedule = state.eventsToScheduleHeap.pop();
     state.scheduledEvents = [];
-    const alreadyUsedIndexes = new Set();
+    const alreadyUsedIndexes = new Map(); // Map<string|symbol, Set<number>>
     while (nextEventToSchedule) {
         scheduleEvent(state, nextEventToSchedule, alreadyUsedIndexes);
         nextEventToSchedule = state.eventsToScheduleHeap.pop();
+    }
+}
+
+function updateAlreadyUsedIndexesForParticipants(eventIntervals, event, alreadyUsedIndexes) {
+    for (const interval of eventIntervals) {
+        for (const participant of event.participants) {
+            if (!alreadyUsedIndexes.has(participant.id)) {
+                alreadyUsedIndexes.set(participant.id, new Set());
+            }
+            alreadyUsedIndexes.get(participant.id).add(interval.index);
+        }
     }
 }
 
@@ -99,18 +174,22 @@ function scheduleEvent(state, event, alreadyUsedIndexes) {
     const combinedIntervalSet = combineParticipantIntervalSets(weightedIntervalSet, event.participants);
     const eventIntervals = findBestEventInterval(event, combinedIntervalSet, alreadyUsedIndexes);
     const startingEventTime = eventIntervals[0].interval.start;
-    for (const interval of eventIntervals) {
-        alreadyUsedIndexes.add(interval.index);
-    }
+    updateAlreadyUsedIndexesForParticipants(eventIntervals, event, alreadyUsedIndexes);
     event.eventInterval = Interval.after(startingEventTime, event.eventDuration);
     for (const participant of event.participants) {
         for (let i = 0; i < eventIntervals.length; i += 1) {
             setMaxWeight(participant.participantWeightedInterval[eventIntervals[i].index], 0);
         }
     }
-    state.scheduledEvents.push(event.eventInterval);
+    state.scheduledEvents.push(event);
 }
 
+/**
+ * Combines the interval sets of multiple participants
+ * @param destinationIntervalSet
+ * @param participants
+ * @returns {*}
+ */
 function combineParticipantIntervalSets(destinationIntervalSet, participants) {
     for (let i = 0; i < destinationIntervalSet.length; i += 1) {
         const destinationInterval = destinationIntervalSet[i];
@@ -124,16 +203,29 @@ function combineParticipantIntervalSets(destinationIntervalSet, participants) {
 }
 
 /**
- * Returns the contiguous block with the highest weight that the event can be placed
- * into. If there is a tie, then the latest block is chosen.
- *
- * events produced by the algorithm.
+ * Returns the contiguous block with the highest effective weight that the event can be placed
+ * into. If there is a tie, then the block with the highest weight is chosen.
+ * events produced by the algorithm. If there is still a tie, it is left to the implementation
+ * detail of the heap. (The implementation detail here seems to choose the earliest event first.)
  * @param {EventToScheduleProcessing} event
  * @param {WeightedIntervalSet} weightedIntervalSet
  * @param {Set<number>} alreadyUsedIndexes
  * @returns {*}
  */
 function findBestEventInterval(event, weightedIntervalSet, alreadyUsedIndexes) {
+    function sliceHasUsedIndex(index) {
+        const upperBound = index + event.numberOfSubintervals;
+        for (let i = index; i < upperBound; i += 1) {
+            for (let participant of event.participants) {
+                const usedIndexesForParticipant = alreadyUsedIndexes.get(participant.id);
+                if (usedIndexesForParticipant && usedIndexesForParticipant.has(i)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     const sliceHeap = new Heap((sliceA, sliceB) => {
         if (sliceA.effectiveWeight > 0 && sliceB.effectiveWeight === 0) {
             return -1;
@@ -146,7 +238,11 @@ function findBestEventInterval(event, weightedIntervalSet, alreadyUsedIndexes) {
         }
         return sliceB.weight - sliceA.weight;
     });
+
     for (let i = 0; i < weightedIntervalSet.length - event.numberOfSubintervals; i += 1) {
+        if (sliceHasUsedIndex(i)) {
+            continue;
+        }
         const slice = {
             effectiveWeight: 0,
             weight: 0,
@@ -159,19 +255,8 @@ function findBestEventInterval(event, weightedIntervalSet, alreadyUsedIndexes) {
         }
         sliceHeap.push(slice);
     }
-    function sliceHasUsedIndex(slice) {
-        const upperBound = slice.index + event.numberOfSubintervals;
-        for (let i = slice.index; i < upperBound; i += 1) {
-            if (alreadyUsedIndexes.has(i)) {
-                return true;
-            }
-        }
-        return false;
-    }
+
     let largestSlice = sliceHeap.pop();
-    while (!sliceHeap.empty() && sliceHasUsedIndex(largestSlice)) {
-        largestSlice = sliceHeap.pop();
-    }
     return weightedIntervalSet.slice(largestSlice.index, largestSlice.index + event.numberOfSubintervals);
 }
 
@@ -206,9 +291,9 @@ function copyWeightedIntervalSet(weightedInterval) {
  * Creates a weighted interval set from a reference weighted interval set that
  * has the participant preferences set based on the weekly preferences and the events
  * of that user.
- * @param weightedIntervalSet
- * @param weeklyPreferences
- * @param events
+ * @param {WeightedIntervalSet} weightedIntervalSet
+ * @param {WeeklyPreference[]} weeklyPreferences
+ * @param {Interval[]} events
  * @returns {Array<{effectiveWeight: number, interval: Interval, weight: number}>}
  */
 function createParticipantWeightedInterval(weightedIntervalSet, weeklyPreferences, events) {
@@ -239,8 +324,8 @@ function getOverlappingIntervals(weightedIntervalSet, interval) {
 
 /**
  * Returns weight interval set index that contains the target date time.
- * @param weightedIntervalSet
- * @param targetDateTime
+ * @param {WeightedIntervalSet} weightedIntervalSet
+ * @param {DateTime} targetDateTime
  */
 function binarySearchWeightedInterval(weightedIntervalSet, targetDateTime) {
     let leftPivot = 0;

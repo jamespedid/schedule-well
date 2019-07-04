@@ -190,11 +190,15 @@ function interpretParticipant({
     weight,
 }) {
     return {
-        id: isString(id) ? id : null,
+        id: isString(id) ? id : generateSymbolId(),
         weight: interpretWeight(weight),
         weeklyPreferences: interpretWeeklyPreferences(weeklyPreferences),
         events: interpretEvents(events),
     };
+}
+
+function generateSymbolId() {
+    return new Symbol();
 }
 
 /**

@@ -91,9 +91,17 @@ import { DateTime, Interval, Duration, Zone } from 'luxon';
 
 /**
  * @typedef {Object} EventToScheduleProcessing
- * @property {Array<string>} participantIds
+ * @property {Array<ParticipantData>} participants
  * @property {Duration} eventDuration
  * @property {number} numberOfSubintervals
+ */
+
+/**
+ * @typedef {Object} EventToScheduleProcessed
+ * @property {Array<ParticipantData>} participants
+ * @property {Duration} eventDuration
+ * @property {number} numberOfSubintervals
+ * @property {Interval} eventInterval
  */
 
 

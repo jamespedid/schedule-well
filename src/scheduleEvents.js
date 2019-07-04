@@ -6,7 +6,7 @@ import { Interval } from 'luxon';
 
 /**
  *  @param {ScheduleEventsInputLike} schedulingInputLike - scheduling input
- *  @returns {Array<EventToScheduleProcessed>}
+ *  @returns {ScheduleEventsOutput}
  */
 export function scheduleEvents(schedulingInputLike) {
     /*
@@ -20,16 +20,16 @@ export function scheduleEvents(schedulingInputLike) {
     /*
         At this point: the standardized input is valid. If it was not, the validate function would have thrown an error.
         Key takeaways:
-            scheduledInput.resolution is a valid duration object.
-            scheduledInput.schedulingParameters.schedulingPeriod is a valid interval object.
-            scheduledInput.schedulingParameters.eventsToSchedule is an array. (It may be empty.)
+            schedulingInput.resolution is a valid duration object.
+            schedulingInput.schedulingParameters.schedulingPeriod is a valid interval object.
+            schedulingInput.schedulingParameters.eventsToSchedule is an array. (It may be empty.)
                 If an eventToSchedule has participantIds, then the ids are guaranteed to be covered
                 by the participants array ids.
-            scheduledInput.schedulingParameters.numberOfEvents is an integer. If eventsToSchedule is non-zero,
+            schedulingInput.schedulingParameters.numberOfEvents is an integer. If eventsToSchedule is non-zero,
                 then the length of eventsToSchedule equals this number.
-            scheduledInput.schedulingParameters.lengthOfEvents is a duration or an array of durations.
+            schedulingInput.schedulingParameters.lengthOfEvents is a duration or an array of durations.
                 If it is an array of durations, then the length of the durations matches the number of events.
-            scheduledInput.participants is an array of zero or more participants.
+            schedulingInput.participants is an array of zero or more participants.
                 If a participant has weekly preferences, then these preferences have no overlap,
                 and no weekly preference is longer than one week.
                 It is a requirement that the entire set of weekly preferences exists in a single calendar week,
@@ -79,7 +79,24 @@ export function scheduleEvents(schedulingInputLike) {
             scheduledEvents: Array<EventToScheduleProcessed>
         }
      */
-    return state.scheduledEvents;
+    return formatOutput(state.scheduledEvents);
+}
+
+/**
+ * @param {EventToScheduleProcessed[]} scheduledEvents
+ * @returns {ScheduledEvent[]}
+ */
+function formatOutput(scheduledEvents) {
+    return scheduledEvents.map(scheduledEvent => {
+        const participantIds = scheduledEvent.participants.map(p => p.id);
+        return {
+            participantIds,
+            eventInterval: {
+                start: scheduledEvent.eventInterval.start.toISO(),
+                end: scheduledEvent.eventInterval.end.toISO(),
+            }
+        }
+    });
 }
 
 function computeSchedulingInterval(state) {

@@ -38,7 +38,6 @@ import { DateTime, Interval, Duration, Zone } from 'luxon';
  * @property {number} minutes
  * @property {number} seconds
  * @property {number} milliseconds
- * @property {string|Zone} zone
  */
 
 /**
@@ -160,5 +159,11 @@ import { DateTime, Interval, Duration, Zone } from 'luxon';
  */
 
 /**
- * @typedef {Object} ScheduleEventsOutput
+ * @typedef {Object} ScheduledEvent
+ * @property {string[]} participantIds -- will return participant ids. Will not include generated symbol ids.
+ * @property {IntervalLike} eventInterval -- will be object with start and end datetime iso string properties
+ */
+
+/**
+ * @typedef {ScheduledEvent[]} ScheduleEventsOutput
  */

@@ -7,24 +7,36 @@ import {
     isArray,
 } from './_lodashImports';
 import { MultiError } from './multiError';
-import { DateTime, Interval } from 'luxon';
+import { DateTime, Duration, Interval } from 'luxon';
+import {
+    EventToSchedule,
+    ParticipantData, ParticipantId,
+    SchedulingEventsInput,
+    SchedulingParameters,
+    WeeklyPreference,
+} from '../types';
 
 /**
  * The schedulingInput is assumed to be well-formed.
  * Validations here only will consider if the input data is consistent.
  * @param {ScheduleEventsInput} schedulingInput
  */
-export function validateSchedulingInput(schedulingInput) {
+export function validateSchedulingInput(schedulingInput: SchedulingEventsInput) {
     const validator = new SchedulingInputValidator(schedulingInput);
     validator.assertAllValidations();
 }
 
 class SchedulingInputValidator {
+    private readonly schedulingParameters: SchedulingParameters;
+    private readonly participants: ParticipantData[];
+    private readonly resolution: Duration;
+    private readonly errors: Error[];
+
     constructor({
         schedulingParameters,
         participants,
         resolution,
-    }) {
+    }: SchedulingEventsInput) {
         this.schedulingParameters = schedulingParameters;
         this.participants = participants;
         this.resolution = resolution;
@@ -64,7 +76,7 @@ class SchedulingInputValidator {
 
     validateSchedulingPeriod() {
         if (!this.schedulingParameters.schedulingPeriod.isValid) {
-            this.errors.push('invalid schedulingPeriod');
+            this.errors.push(new Error('invalid schedulingPeriod'));
         }
     }
 
@@ -75,13 +87,13 @@ class SchedulingInputValidator {
 
     }
 
-    validateEventToSchedule(eventToSchedule) {
+    validateEventToSchedule(eventToSchedule: EventToSchedule) {
         const { participantIds, eventDuration } = eventToSchedule;
         if (!this.areParticipantIdsCovered(participantIds)) {
-            this.errors.push('invalid participantIds list (eventsToSchedule)');
+            this.errors.push(new Error('invalid participantIds list (eventsToSchedule)'));
         }
         if (!eventDuration.isValid) {
-            this.errors.push('invalid eventDuration');
+            this.errors.push(new Error('invalid eventDuration'));
         }
     }
 
@@ -94,13 +106,13 @@ class SchedulingInputValidator {
             numberOfEvents = numberOfEvents || 0;
         }
         if (eventsToSchedule.length > 0 && numberOfEvents > 0 && eventsToSchedule.length !== numberOfEvents) {
-            this.errors.push('numberOfEvents must match eventsToSchedule length');
+            this.errors.push(new Error('numberOfEvents must match eventsToSchedule length'));
         }
         if (numberOfEvents < 1) {
-            this.errors.push('numberOfEvents must be positive');
+            this.errors.push(new Error('numberOfEvents must be positive'));
         }
         if (!isInteger(numberOfEvents)) {
-            this.errors.push('numberOfEvents must be an integer');
+            this.errors.push(new Error('numberOfEvents must be an integer'));
         }
     }
 
@@ -113,14 +125,14 @@ class SchedulingInputValidator {
         forEach(lengthOfEvents, lengthOfEvent => this.validateLengthOfEvent(lengthOfEvent));
         if (eventsToSchedule) {
             if (lengthOfEvents.length !== eventsToSchedule.length) {
-                this.errors.push('lengthOfEvents length is different than eventsToSchedule length');
+                this.errors.push(new Error('lengthOfEvents length is different than eventsToSchedule length'));
             }
         }
     }
 
-    validateLengthOfEvent(lengthOfEvent) {
+    validateLengthOfEvent(lengthOfEvent: Duration) {
         if (!lengthOfEvent.isValid) {
-            this.errors.push('invalid lengthOfEvent');
+            this.errors.push(new Error('invalid lengthOfEvent'));
         }
     }
 
@@ -129,26 +141,26 @@ class SchedulingInputValidator {
         forEach(participants, participant => this.validateParticipant(participant));
     }
 
-    validateParticipant(participant) {
+    validateParticipant(participant: ParticipantData) {
         const { weeklyPreferences, events } = participant;
         this.validateWeeklyPreferences(weeklyPreferences);
         this.validateParticipantEvents(events);
     }
 
-    validateWeeklyPreferences(weeklyPreferences) {
+    validateWeeklyPreferences(weeklyPreferences: WeeklyPreference[]) {
         if (weeklyPreferences.length === 0) {
             return;
         }
         weeklyPreferences.sort((wp1, wp2) => {
             return wp1.interval.start.valueOf() - wp2.interval.start.valueOf();
         });
-        let minStartingWeeklyPreferenceTime = Infinity;
-        let maxEndingWeeklyPreferenceTime = -Infinity;
+        let minStartingWeeklyPreferenceTime: number = Infinity;
+        let maxEndingWeeklyPreferenceTime: number = -Infinity;
         forEach(weeklyPreferences, weeklyPreference => {
             this.validateWeeklyPreference(weeklyPreference);
             if (weeklyPreference.interval.isValid) {
-                minStartingWeeklyPreferenceTime = Math.min(weeklyPreference.interval.valueOf(), minStartingWeeklyPreferenceTime);
-                maxEndingWeeklyPreferenceTime = Math.max(weeklyPreference.interval.valueOf(), maxEndingWeeklyPreferenceTime);
+                minStartingWeeklyPreferenceTime = Math.min(weeklyPreference.interval.valueOf() as number, minStartingWeeklyPreferenceTime);
+                maxEndingWeeklyPreferenceTime = Math.max(weeklyPreference.interval.valueOf() as number, maxEndingWeeklyPreferenceTime);
             }
         });
         const entireWeeklyInterval = Interval.fromDateTimes(
@@ -156,32 +168,32 @@ class SchedulingInputValidator {
             DateTime.fromMillis(maxEndingWeeklyPreferenceTime),
         );
         if (entireWeeklyInterval.length('week') > 1) {
-            this.errors.push('weeklyPreferences must not extend to be beyond single week');
+            this.errors.push(new Error('weeklyPreferences must not extend to be beyond single week'));
         }
 
         for (let i = 0; i < weeklyPreferences.length - 1; i += 1) {
             const wp1 = weeklyPreferences[i];
             const wp2 = weeklyPreferences[i + 1];
             if (wp1.interval.overlaps(wp2.interval)) {
-                this.errors.push('invalid weeklyPreferences - overlap not allowed');
+                this.errors.push(new Error('invalid weeklyPreferences - overlap not allowed'));
             }
         }
     }
 
-    validateWeeklyPreference(weeklyPreference) {
+    validateWeeklyPreference(weeklyPreference: WeeklyPreference) {
         const { interval } = weeklyPreference;
         if (!interval.isValid || interval.length('week') > 1) {
-            this.errors.push('invalid weeklyPreference');
+            this.errors.push(new Error('invalid weeklyPreference'));
         }
     }
 
-    validateParticipantEvents(events) {
+    validateParticipantEvents(events: Interval[]) {
         forEach(events, event => this.validateParticipantEvent(event));
     }
 
-    validateParticipantEvent(event) {
+    validateParticipantEvent(event: Interval) {
         if (!event.isValid) {
-            this.errors.push('invalid participant event');
+            this.errors.push(new Error('invalid participant event'));
         }
     }
 
@@ -189,8 +201,8 @@ class SchedulingInputValidator {
         return map(this.participants, participant => participant.id);
     }
 
-    areParticipantIdsCovered(participantIds) {
-        return isEmpty(difference(participantIds, this.participants));
+    areParticipantIdsCovered(participantIds?: ParticipantId[]) {
+        return isEmpty(difference(participantIds, this.participantIds));
     }
 
 }

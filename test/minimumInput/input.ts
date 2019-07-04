@@ -15,6 +15,8 @@
  * -- [2019-06-30T04:30:00-0400, 2019-06-30T05:45:00-0400)
  * -- [2019-06-30T06:00:00-0400, 2019-06-30T07:15:00-0400)
  */
+import { SchedulingEventsInputLike } from '../../types';
+
 export default {
     resolution: { minutes: 30 },
     schedulingParameters: {
@@ -31,4 +33,4 @@ export default {
     }, {
         id: 'four'
     }]
-};
+} as SchedulingEventsInputLike;

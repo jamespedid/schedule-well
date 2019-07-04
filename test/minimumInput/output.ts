@@ -1,3 +1,5 @@
+import { ScheduledEvents } from '../../types';
+
 export default [{
     "participantIds": ["one", "two", "three", "four"],
     "eventInterval": { "start": "2019-06-30T00:00:00.000-04:00", "end": "2019-06-30T01:15:00.000-04:00" },
@@ -13,5 +15,4 @@ export default [{
 }, {
     "participantIds": ["one", "two", "three", "four"],
     "eventInterval": { "start": "2019-06-30T06:00:00.000-04:00", "end": "2019-06-30T07:15:00.000-04:00" },
-}]
-;
+}] as ScheduledEvents;

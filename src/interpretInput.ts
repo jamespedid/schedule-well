@@ -6,92 +6,96 @@ import {
     isString,
     isNil,
 } from './_lodashImports';
-import { DateTime, Duration, Interval } from 'luxon';
+import {
+    Duration,
+    Interval,
+    DateTime,
+    DurationLike,
+    DurationObject,
+    IntervalLike,
+    IntervalObject,
+    IntervalArray,
+    DateTimeLike,
+    EventToScheduleLike,
+    SchedulingParametersLike,
+    WeeklyPreferenceLike,
+    ParticipantId,
+    ParticipantDataLike,
+    SchedulingEventsInputLike,
+    SchedulingEventsInput,
+    ParticipantData,
+    EventToSchedule,
+    SchedulingParameters,
+} from "../types";
 
-/**
- * @param {DurationLike} durationLike
- * @returns {Duration}
- */
-function interpretDurationLike(durationLike) {
+function interpretDurationLike(durationLike: DurationLike): Duration {
     try {
         if (Duration.isDuration(durationLike)) {
             return durationLike;
         }
         if (isPlainObject(durationLike)) {
-            return Duration.fromObject(durationLike);
+            return Duration.fromObject(durationLike as DurationObject);
         }
         if (isFinite) {
-            return Duration.fromMillis(durationLike);
+            return Duration.fromMillis(durationLike as number);
         }
         if (isString) {
-            return Duration.fromISO(durationLike);
+            return Duration.fromISO(durationLike as string);
         }
     } catch {
     }
     return Duration.invalid('invalid durationlike input');
 }
 
-/**
- * @param {IntervalLike} intervalLike
- * @returns {Interval}
- */
-function interpretIntervalLike(intervalLike) {
+function interpretIntervalLike(intervalLike: IntervalLike): Interval {
     try {
         if (Interval.isInterval(intervalLike)) {
             return intervalLike;
         }
         if (isPlainObject(intervalLike)) {
-            const { start, end } = intervalLike;
+            const { start, end } = intervalLike as IntervalObject;
             return Interval.fromDateTimes(interpretDateTimeLike(start), interpretDateTimeLike(end));
         }
         if (isArray(intervalLike)) {
-            const [start, end] = intervalLike;
+            const [start, end] = intervalLike as IntervalArray;
             return Interval.fromDateTimes(interpretDateTimeLike(start), interpretDateTimeLike(end));
         }
         if (isString(intervalLike)) {
-            return Interval.fromISO(string);
+            return Interval.fromISO(intervalLike as string);
         }
     } catch {
     }
     return Interval.invalid('invalid intervallike input');
 }
 
-/**
- * @param {DateTimeLike} dateTimeLike
- * @returns {DateTime}
- */
-function interpretDateTimeLike(dateTimeLike) {
+function interpretDateTimeLike(dateTimeLike: DateTimeLike): DateTime {
     try {
         if (DateTime.isDateTime(dateTimeLike)) {
             return dateTimeLike;
         }
         if (dateTimeLike instanceof Date) {
-            return DateTime.fromJSDate(date);
+            return DateTime.fromJSDate(dateTimeLike);
         }
         if (isString(dateTimeLike)) {
             return DateTime.fromISO(dateTimeLike);
         }
         if (isFinite(dateTimeLike)) {
-            return DateTime.fromMillis(dateTimeLike);
+            return DateTime.fromMillis(dateTimeLike as number);
         }
     } catch {
     }
     return DateTime.invalid('invalid datetimelike input');
 }
 
-/**
- * @param {number} number
- * @returns {number}
- */
-function interpretNumber(number) {
-    return isFinite(number) ? number : null;
+function interpretNumber(number?: number): number | null {
+    if (isFinite(number)) {
+        return typeof number === 'undefined' ? null : number;
+    } else {
+        return null;
+    }
 }
 
-/**
- * @param {number} weight
- * @returns {number}
- */
-function interpretWeight(weight) {
+function interpretWeight(weight?: number): number {
     if (isNil(weight)) {
         return 1;
     }
@@ -101,94 +105,62 @@ function interpretWeight(weight) {
     return Math.max(weight, 0);
 }
 
-/**
- * @param EventToScheduleLike
- * @returns {EventToSchedule}
- */
 function interpretEventToSchedule({
     participantIds,
     eventDuration,
-}) {
+}: EventToScheduleLike): EventToSchedule {
     return {
         participantIds: isArray(participantIds) ? participantIds : [],
         eventDuration: interpretDurationLike(eventDuration),
     };
 }
 
-/**
- * @param {Array<EventToScheduleLike>} eventsToSchedule
- * @returns {Array<EventToSchedule>}
- */
-function interpretEventsToSchedule(eventsToSchedule) {
-    return map(eventsToSchedule, interpretEventToSchedule);
+function interpretEventsToSchedule(eventsToSchedule?: EventToScheduleLike[]): EventToSchedule[] {
+    return isArray(eventsToSchedule) ? map(eventsToSchedule, interpretEventToSchedule) : [];
 }
 
-/**
- * @param {Duration|Array<Duration>} lengthOfEvents
- * @returns {Duration|Array<Duration>}
- */
-function interpretLengthOfEvents(lengthOfEvents) {
+function interpretLengthOfEvents(lengthOfEvents: DurationLike | DurationLike[]): Duration | Duration[] {
     return isArray(lengthOfEvents) ? lengthOfEvents.map(interpretDurationLike) : interpretDurationLike(lengthOfEvents);
 }
 
-/**
- * @param {SchedulingParametersLike} parameters
- * @returns {SchedulingParameters}
- */
 function interpretSchedulingParameters({
     schedulingPeriod,
     eventsToSchedule,
     numberOfEvents,
     lengthOfEvents,
-}) {
+}: SchedulingParametersLike): SchedulingParameters {
     return {
         schedulingPeriod: interpretIntervalLike(schedulingPeriod),
         eventsToSchedule: interpretEventsToSchedule(eventsToSchedule),
-        numberOfEvents: interpretNumber(numberOfEvents),
+        numberOfEvents: interpretNumber(numberOfEvents) || (eventsToSchedule && eventsToSchedule.length) || 0,
         lengthOfEvents: interpretLengthOfEvents(lengthOfEvents),
     };
 }
 
-/**
- * @param {WeeklyPreferenceLike} weeklyPreference
- * @returns {WeeklyPreference}
- */
 function interpretWeeklyPreference({
     weight,
     interval,
-}) {
+}: WeeklyPreferenceLike) {
     return {
         weight: interpretWeight(weight),
         interval: interpretIntervalLike(interval),
     };
 }
 
-/**
- * @param {Array<WeeklyPreferenceLike>} weeklyPreferences
- * @returns {Array<WeeklyPreference>}
- */
-function interpretWeeklyPreferences(weeklyPreferences) {
-    return map(weeklyPreferences, interpretWeeklyPreference);
+function interpretWeeklyPreferences(weeklyPreferences?: WeeklyPreferenceLike[]) {
+    return isArray(weeklyPreferences) ? map(weeklyPreferences, interpretWeeklyPreference) : [];
 }
 
-/**
- * @param {Array<IntervalLike>} events
- * @returns {Array<Interval>}
- */
-function interpretEvents(events) {
-    return map(events, interpretIntervalLike);
+function interpretEvents(events?: IntervalLike[]) {
+    return isArray(events) ? map(events, interpretIntervalLike) : [];
 }
 
-/**
- * @param {ParticipantDataLike} participantData
- * @returns {ParticipantData}
- */
 function interpretParticipant({
     id,
     weeklyPreferences,
     events,
     weight,
-}) {
+}: ParticipantDataLike): ParticipantData {
     return {
         id: isString(id) ? id : generateSymbolId(),
         weight: interpretWeight(weight),
@@ -197,33 +169,25 @@ function interpretParticipant({
     };
 }
 
-function generateSymbolId() {
-    return new Symbol();
+function generateSymbolId(): ParticipantId {
+    return Symbol();
 }
 
-/**
- * @param {Array<ParticipantDataLike>} participants
- * @returns {Array<ParticipantData>}
- */
-function interpretParticipants(participants) {
+function interpretParticipants(participants: ParticipantDataLike[]): ParticipantData[] {
     return map(participants, interpretParticipant);
 }
 
-function interpretResolution(resolution) {
+function interpretResolution(resolution: DurationLike) {
     return isNil(resolution)
         ? Duration.fromObject({ minutes: 15 })
         : interpretDurationLike(resolution);
 }
 
-/**
- * @param {ScheduleEventsInputLike} input
- * @return {ScheduleEventsInput} sanitized input
- */
 export function interpretInput({
     participants,
     schedulingParameters,
     resolution,
-} = {}) {
+}: SchedulingEventsInputLike): SchedulingEventsInput {
     return {
         participants: interpretParticipants(participants),
         schedulingParameters: interpretSchedulingParameters(schedulingParameters),

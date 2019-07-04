@@ -153,6 +153,3 @@ export type SchedulingEventsState = SchedulingEventsStateStart
     | SchedulingEventsStateEventsToSchedule
     | SchedulingEventsStateFinal;
 export type AlreadyUsedIndexesMapSet = Map<ParticipantId, Set<number>>
-interface ErrorConstructor {
-    captureStackTrace(thisArg: any, func: any): void
-}

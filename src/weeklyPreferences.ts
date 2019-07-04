@@ -20,7 +20,6 @@ export function createWeekdayHoursWeeklyPreference(
     timeZone: ZoneLike = 'UTC',
     outsideWeight = 0,
     insideWeight = 1,
-    daysOfWeekToInclude = [0, 1, 2, 3, 4, 5, 6],
 ): WeeklyPreference[] {
     let startDuration = interpretDurationLike(start);
     let endDuration = interpretDurationLike(end);
@@ -33,33 +32,19 @@ export function createWeekdayHoursWeeklyPreference(
     const friday = sunday.plus({ days: 5 });
     const saturday = sunday.plus({ days: 6 });
     const weeklyPreferences = [];
-    if (daysOfWeekToInclude.includes(0)) {
-        weeklyPreferences.push({
-            weight: outsideWeight,
-            interval: Interval.after(sunday, { days: 1 }),
-        });
-    }
-    if (daysOfWeekToInclude.includes(1)) {
-        addDailyPreference(weeklyPreferences, monday, startDuration, endDuration, outsideWeight, insideWeight);
-    }
-    if (daysOfWeekToInclude.includes(2)) {
-        addDailyPreference(weeklyPreferences, tuesday, startDuration, endDuration, outsideWeight, insideWeight);
-    }
-    if (daysOfWeekToInclude.includes(3)) {
-        addDailyPreference(weeklyPreferences, wednesday, startDuration, endDuration, outsideWeight, insideWeight);
-    }
-    if (daysOfWeekToInclude.includes(4)) {
-        addDailyPreference(weeklyPreferences, thursday, startDuration, endDuration, outsideWeight, insideWeight);
-    }
-    if (daysOfWeekToInclude.includes(5)) {
-        addDailyPreference(weeklyPreferences, friday, startDuration, endDuration, outsideWeight, insideWeight);
-    }
-    if (daysOfWeekToInclude.includes(6)) {
-        weeklyPreferences.push({
-            weight: outsideWeight,
-            interval: Interval.after(saturday, { days: 1 }),
-        });
-    }
+    weeklyPreferences.push({
+        weight: outsideWeight,
+        interval: Interval.after(sunday, { days: 1 }),
+    });
+    addDailyPreference(weeklyPreferences, monday, startDuration, endDuration, outsideWeight, insideWeight);
+    addDailyPreference(weeklyPreferences, tuesday, startDuration, endDuration, outsideWeight, insideWeight);
+    addDailyPreference(weeklyPreferences, wednesday, startDuration, endDuration, outsideWeight, insideWeight);
+    addDailyPreference(weeklyPreferences, thursday, startDuration, endDuration, outsideWeight, insideWeight);
+    addDailyPreference(weeklyPreferences, friday, startDuration, endDuration, outsideWeight, insideWeight);
+    weeklyPreferences.push({
+        weight: outsideWeight,
+        interval: Interval.after(saturday, { days: 1 }),
+    });
     return weeklyPreferences;
 }
 

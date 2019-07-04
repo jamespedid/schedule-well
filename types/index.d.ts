@@ -1,13 +1,6 @@
 import { DateTime, Interval, Duration, DurationObject, Zone } from 'luxon';
 import Heap from 'heap';
 
-export {
-    DateTime,
-    Interval,
-    Duration,
-    DurationObject,
-    Zone,
-};
 // public types
 export type ZoneLike = string | Zone;
 export type DateTimeObject = {

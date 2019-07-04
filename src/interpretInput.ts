@@ -6,12 +6,9 @@ import {
     isString,
     isNil,
 } from './_lodashImports';
+import { Duration, Interval, DurationObject, DateTime } from 'luxon';
 import {
-    Duration,
-    Interval,
-    DateTime,
     DurationLike,
-    DurationObject,
     IntervalLike,
     IntervalObject,
     IntervalArray,

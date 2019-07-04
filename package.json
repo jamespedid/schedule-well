@@ -5,6 +5,10 @@
     "heap": "^0.2.6",
     "luxon": "^1.15.0"
   },
+  "main": "./lib/index.js",
+  "files": [
+    "lib"
+  ],
   "devDependencies": {
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
@@ -27,7 +31,9 @@
   },
   "scripts": {
     "check-types": "tsc",
-    "build": "babel ./src -d ./lib --extensions '.ts,js",
+    "prebuild": "npm run check-types",
+    "build": "babel ./src -d ./lib --extensions '.ts,js'",
+    "pretest": "npm run check-types",
     "test": "mocha"
   }
 }

@@ -25,7 +25,7 @@ import {
     SchedulingParameters,
 } from "../types";
 
-function interpretDurationLike(durationLike: DurationLike): Duration {
+export function interpretDurationLike(durationLike: DurationLike): Duration {
     try {
         if (Duration.isDuration(durationLike)) {
             return durationLike;

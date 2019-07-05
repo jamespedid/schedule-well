@@ -382,13 +382,11 @@ function setMaxWeight(subinterval: WeightedInterval, newWeight: number) {
 }
 
 function addWeight(subinterval: WeightedInterval, newWeight: number) {
+    subinterval.weight += newWeight;
     if (newWeight === 0) {
-        subinterval.weight = 0;
-    }
-    if (subinterval.weight === 0 || subinterval.effectiveWeight === 0) {
         subinterval.effectiveWeight = 0;
-    } else {
-        subinterval.weight += newWeight;
-        subinterval.effectiveWeight += subinterval.weight;
+    }
+    if (subinterval.effectiveWeight > 0) {
+        subinterval.effectiveWeight += newWeight;
     }
 }

@@ -5,14 +5,12 @@ import { interpretDurationLike } from './interpretInput';
 /**
  * Returns a weekly preference set that is weight <insideWeight> for hours between start and end and <outsideWeight>
  * otherwise. The hours are determined in the provided timezone, which defaults to UTC. Implementation Detail: the week
- * used is the current week.
+ * used is the week starting on Jan 4 1970.
  * @param start - duration offset from the beginning of the day for the start of the weight 1 interval
  * @param end - duration offset from the beginning of the day for the end of the weight 1 interval
  * @param timeZone
  * @param outsideWeight - weight set to values outside of interval. defaults to 0.
  * @param insideWeight - weight set to the values inside of the interval. defaults to 0.
- * @param daysOfWeekToInclude - if day of week (expressed as an integer, 0 = sunday, 1 = monday, etc) is included, then
- *     the weekly preference will be processed for this day. Defaults to [0, 1, 2, 3, 4, 5, 6]
  */
 export function createWeekdayHoursWeeklyPreference(
     start: DurationLike,
@@ -23,8 +21,8 @@ export function createWeekdayHoursWeeklyPreference(
 ): WeeklyPreference[] {
     let startDuration = interpretDurationLike(start);
     let endDuration = interpretDurationLike(end);
-    validateWorkHourPreference(startDuration, endDuration);
-    const sunday = DateTime.local().startOf('week').setZone(timeZone);
+    validateWeekydayPreference(startDuration, endDuration);
+    const sunday = DateTime.local(1970, 1, 4, 0, 0, 0).setZone(timeZone);
     const monday = sunday.plus({ days: 1 });
     const tuesday = sunday.plus({ days: 2 });
     const wednesday = sunday.plus({ days: 3 });
@@ -46,6 +44,52 @@ export function createWeekdayHoursWeeklyPreference(
         interval: Interval.after(saturday, { days: 1 }),
     });
     return weeklyPreferences;
+}
+
+export function createWeekdayPreference(
+    dayOfWeek: 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday',
+    start: DurationLike,
+    end: DurationLike,
+    timeZone: ZoneLike = 'UTC',
+    weight = 1,
+): WeeklyPreference {
+    let startDuration = interpretDurationLike(start);
+    let endDuration = interpretDurationLike(end);
+    validateWeekydayPreference(startDuration, endDuration);
+    const sunday = DateTime.local(1970, 1, 4, 0, 0, 0).setZone(timeZone);
+    let day: DateTime;
+    switch (dayOfWeek) {
+        case 'sunday':
+            day = sunday;
+            break;
+        case 'monday':
+            day = sunday.plus({ days: 1 });
+            break;
+        case 'tuesday':
+            day = sunday.plus({ days: 2 });
+            break;
+        case 'wednesday':
+            day = sunday.plus({ days: 3 });
+            break;
+        case 'thursday':
+            day = sunday.plus({ days: 4 });
+            break;
+        case 'friday':
+            day = sunday.plus({ days: 5 });
+            break;
+        case 'saturday':
+            day = sunday.plus({ days: 6 });
+            break;
+        default:
+            throw new Error('invalid weekday');
+    }
+    return {
+        weight: weight,
+        interval: Interval.fromDateTimes(
+            day.plus(startDuration),
+            day.plus(endDuration),
+        ),
+    };
 }
 
 function addDailyPreference(
@@ -74,7 +118,7 @@ function addDailyPreference(
     }
 }
 
-function validateWorkHourPreference(
+function validateWeekydayPreference(
     startDuration: Duration,
     endDuration: Duration,
 ) {

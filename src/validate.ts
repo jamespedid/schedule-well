@@ -64,6 +64,7 @@ class SchedulingInputValidator {
 
     validateSchedulingParameters() {
         this.validateSchedulingPeriod();
+        this.validateAmbientWeeklyPreferences();
         this.validateEventsToSchedule();
         this.validateNumberOfEvents();
         this.validateLengthOfEvents();
@@ -72,6 +73,12 @@ class SchedulingInputValidator {
     validateSchedulingPeriod() {
         if (!this.schedulingParameters.schedulingPeriod.isValid) {
             this.errors.push(new Error('invalid schedulingPeriod'));
+        }
+    }
+
+    validateAmbientWeeklyPreferences() {
+        if (this.schedulingParameters.ambientWeeklyPreferences.length > 0) {
+            this.validateWeeklyPreferences(this.schedulingParameters.ambientWeeklyPreferences);
         }
     }
 

@@ -22,10 +22,10 @@ import {
     SchedulingEventsInput,
     ParticipantData,
     EventToSchedule,
-    SchedulingParameters,
+    SchedulingParameters, WeeklyPreference,
 } from "../types";
 
-export function interpretDurationLike(durationLike: DurationLike): Duration {
+export function interpretDurationLike(durationLike?: DurationLike): Duration {
     try {
         if (Duration.isDuration(durationLike)) {
             return durationLike;
@@ -116,18 +116,20 @@ function interpretEventsToSchedule(eventsToSchedule?: EventToScheduleLike[]): Ev
     return isArray(eventsToSchedule) ? map(eventsToSchedule, interpretEventToSchedule) : [];
 }
 
-function interpretLengthOfEvents(lengthOfEvents: DurationLike | DurationLike[]): Duration | Duration[] {
+function interpretLengthOfEvents(lengthOfEvents?: DurationLike | DurationLike[]): Duration | Duration[] {
     return isArray(lengthOfEvents) ? lengthOfEvents.map(interpretDurationLike) : interpretDurationLike(lengthOfEvents);
 }
 
 function interpretSchedulingParameters({
     schedulingPeriod,
+    ambientWeeklyPreferences,
     eventsToSchedule,
     numberOfEvents,
     lengthOfEvents,
 }: SchedulingParametersLike): SchedulingParameters {
     return {
         schedulingPeriod: interpretIntervalLike(schedulingPeriod),
+        ambientWeeklyPreferences: interpretWeeklyPreferences(ambientWeeklyPreferences),
         eventsToSchedule: interpretEventsToSchedule(eventsToSchedule),
         numberOfEvents: interpretNumber(numberOfEvents) || (eventsToSchedule && eventsToSchedule.length) || 0,
         lengthOfEvents: interpretLengthOfEvents(lengthOfEvents),
@@ -137,18 +139,18 @@ function interpretSchedulingParameters({
 function interpretWeeklyPreference({
     weight,
     interval,
-}: WeeklyPreferenceLike) {
+}: WeeklyPreferenceLike): WeeklyPreference {
     return {
         weight: interpretWeight(weight),
         interval: interpretIntervalLike(interval),
     };
 }
 
-function interpretWeeklyPreferences(weeklyPreferences?: WeeklyPreferenceLike[]) {
+function interpretWeeklyPreferences(weeklyPreferences?: WeeklyPreferenceLike[]): WeeklyPreference[] {
     return isArray(weeklyPreferences) ? map(weeklyPreferences, interpretWeeklyPreference) : [];
 }
 
-function interpretEvents(events?: IntervalLike[]) {
+function interpretEvents(events?: IntervalLike[]): Interval[] {
     return isArray(events) ? map(events, interpretIntervalLike) : [];
 }
 
@@ -174,7 +176,7 @@ function interpretParticipants(participants: ParticipantDataLike[]): Participant
     return map(participants, interpretParticipant);
 }
 
-function interpretResolution(resolution: DurationLike) {
+function interpretResolution(resolution: DurationLike): Duration {
     return isNil(resolution)
         ? Duration.fromObject({ minutes: 15 })
         : interpretDurationLike(resolution);

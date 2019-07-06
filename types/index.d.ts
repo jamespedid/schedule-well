@@ -46,12 +46,14 @@ export type EventToScheduleLike = {
 }
 export type SchedulingParametersLikeEventsToSchedule = {
     schedulingPeriod: IntervalLike;
+    ambientWeeklyPreferences?: WeeklyPreference[];
     eventsToSchedule: EventToScheduleLike[];
     numberOfEvents?: number;
-    lengthOfEvents: DurationLike | DurationLike[];
+    lengthOfEvents?: DurationLike | DurationLike[];
 }
 export type SchedulingParametersLikeNumberOfEvents = {
     schedulingPeriod: IntervalLike;
+    ambientWeeklyPreferences?: WeeklyPreference[];
     eventsToSchedule?: EventToScheduleLike[];
     numberOfEvents: number;
     lengthOfEvents: DurationLike | DurationLike[];
@@ -98,6 +100,7 @@ export type  EventToScheduleProcessed = {
 }
 export type  SchedulingParameters = {
     schedulingPeriod: Interval;
+    ambientWeeklyPreferences: WeeklyPreference[];
     eventsToSchedule: EventToSchedule[];
     numberOfEvents: number;
     lengthOfEvents: Duration | Duration[];

@@ -111,10 +111,15 @@ function formatOutput(scheduledEvents: EventToScheduleProcessed[]): ScheduledEve
 }
 
 function computeSchedulingInterval(state: SchedulingEventsStateStart) {
-    (state as SchedulingEventsStateComputedSchedulingInterval).schedulingInterval = createWeightedIntervalSet(
+    const nextState = (state as SchedulingEventsStateComputedSchedulingInterval);
+    nextState.schedulingInterval = createWeightedIntervalSet(
         state.schedulingInput.schedulingParameters.schedulingPeriod,
         state.schedulingInput.resolution,
     );
+    applyWeeklyPreferences(
+        nextState.schedulingInterval,
+        state.schedulingInput.schedulingParameters.ambientWeeklyPreferences
+    )
 }
 
 function gatherParticipantData(state: SchedulingEventsStateComputedSchedulingInterval) {
@@ -317,6 +322,16 @@ function copyWeightedIntervalSet(weightedInterval: WeightedIntervalSet) {
     return cloneDeep(weightedInterval);
 }
 
+function applyWeeklyPreferences(weeklyPreferenceIntervalSet: WeightedIntervalSet, weeklyPreferences: WeeklyPreference[]) {
+    for (const subinterval of weeklyPreferenceIntervalSet) {
+        for (const weeklyPreference of weeklyPreferences) {
+            if (isWeeklyOverlap(weeklyPreference.interval, subinterval.interval)) {
+                setMaxWeight(subinterval, weeklyPreference.weight);
+            }
+        }
+    }
+}
+
 /**
  * Creates a weighted interval set from a reference weighted interval set that
  * has the participant preferences set based on the weekly preferences and the events
@@ -325,13 +340,7 @@ function copyWeightedIntervalSet(weightedInterval: WeightedIntervalSet) {
 function createParticipantWeightedInterval(weightedIntervalSet: WeightedIntervalSet, weeklyPreferences: WeeklyPreference[], events: Interval[]): WeightedIntervalSet {
     const weeklyPreferenceIntervalSet = copyWeightedIntervalSet(weightedIntervalSet);
     // apply weekly preferences to each subinterval if it applies
-    for (const subinterval of weeklyPreferenceIntervalSet) {
-        for (const weeklyPreference of weeklyPreferences) {
-            if (isWeeklyOverlap(weeklyPreference.interval, subinterval.interval)) {
-                setMaxWeight(subinterval, weeklyPreference.weight);
-            }
-        }
-    }
+    applyWeeklyPreferences(weeklyPreferenceIntervalSet, weeklyPreferences);
     // set subintervals that contain events to have zero weight
     for (const event of events) {
         const affectedSubIntervals = getOverlappingIntervals(weightedIntervalSet, event);

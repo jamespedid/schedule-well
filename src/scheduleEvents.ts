@@ -144,7 +144,16 @@ function gatherParticipantData(state: SchedulingEventsStateComputedSchedulingInt
 function createEventsToScheduleHeap(state: SchedulingEventsStateParticipants) {
     const nextState = state as SchedulingEventsStateEventsToSchedule;
     nextState.eventsToScheduleHeap = new Heap(function (eventA: EventToScheduleProcessing, eventB: EventToScheduleProcessing) {
-        return eventB.numberOfSubintervals - eventA.numberOfSubintervals;
+        if (eventB.numberOfSubintervals > eventA.numberOfSubintervals) {
+            return 1;
+        }
+        if (eventB.numberOfSubintervals < eventA.numberOfSubintervals) {
+            return -1;
+        }
+        // breaking a tie based on index allowed the algorithm to pack more events into smaller scheduling interval.
+        // see manyParticipantsSmallEvents.test.ts. Without this, the test fails because it cannot pack
+        // each event into scheduled timeframe, even though a solution does exist.
+        return eventA.index - eventB.index;
     });
     const {
         eventsToSchedule,
@@ -176,6 +185,7 @@ function createEventsToScheduleHeap(state: SchedulingEventsStateParticipants) {
             participants,
             eventDuration,
             numberOfSubintervals,
+            index,
         });
     }
 }

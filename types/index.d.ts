@@ -87,12 +87,14 @@ export type  EventToScheduleProcessing = {
     participants: ParticipantData[];
     eventDuration: Duration;
     numberOfSubintervals: number;
+    index: number;
 }
 export type  EventToScheduleProcessed = {
     participants: ParticipantData[];
     eventDuration: Duration;
     numberOfSubintervals: number;
     eventInterval: Interval;
+    index: number;
 }
 export type  SchedulingParameters = {
     schedulingPeriod: Interval;

@@ -1,6 +1,6 @@
 {
   "name": "schedule-well",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "dependencies": {
     "heap": "^0.2.6",
     "luxon": "^1.15.0"

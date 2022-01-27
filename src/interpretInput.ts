@@ -33,10 +33,10 @@ export function interpretDurationLike(durationLike?: DurationLike): Duration {
         if (isPlainObject(durationLike)) {
             return Duration.fromObject(durationLike as DurationObject);
         }
-        if (isFinite) {
+        if (isFinite(durationLike)) {
             return Duration.fromMillis(durationLike as number);
         }
-        if (isString) {
+        if (isString(durationLike)) {
             return Duration.fromISO(durationLike as string);
         }
     } catch {

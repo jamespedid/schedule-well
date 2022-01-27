@@ -16,6 +16,7 @@ export default {
     resolution: { minutes: 30 },
     schedulingParameters: {
         schedulingPeriod: { start: "2019-06-30T12:00:00-0400", end: "2019-06-30T16:00:00-0400" },
+        lengthOfEvents: { minutes: 30 },
         eventsToSchedule: [{
             participantIds: ['one', 'two'],
             eventDuration: { minutes: 30 },
